@@ -125,6 +125,8 @@ $(LEX_C_FILES) := LEXFILE = $(LY_BASE).l
 $(LEX_C_FILES) := LEXFILE = $(LY_BASE).l
 $(YACC_FILES) := YTABC = $(LY_BASE)parse.c
 
+aslcompilerlex.o dtparserlex.o prparserlex.o := CPPFLAGS += -D__EXTENSIONS__
+
 $(YACC_C_FILES:.c=.o) := CERRWARN += -_gcc=-Wno-char-subscripts
 
 OBJS += $(LEX_C_FILES:.c=.o) $(YACC_C_FILES:.c=.o)
