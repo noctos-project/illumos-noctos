@@ -24,6 +24,7 @@
  * Use is subject to license terms.
  * Copyright 2019 Joyent, Inc.
  * Copyright 2026 OmniOS Community Edition (OmniOSce) Association.
+ * Copyright 2026 the NoctOS Project.
  */
 
 #include <sys/kmem.h>
@@ -886,7 +887,7 @@ lx_sysent_t lx_sysent32[] = {
 	{"finit_module", NULL,			NOSYS_NULL,	0}, /* 350 */
 	{"sched_setattr", lx_sched_setattr,	0,		3}, /* 351 */
 	{"sched_getattr", lx_sched_getattr,	0,		4}, /* 352 */
-	{"renameat2",	NULL,			NOSYS_NULL,	0}, /* 353 */
+	{"renameat2",	lx_renameat2,		0,		5}, /* 353 */
 	{"seccomp",	NULL,			NOSYS_NULL,	0}, /* 354 */
 	{"getrandom",	lx_getrandom,		0,		3}, /* 355 */
 	{"memfd_create", NULL,			NOSYS_NULL,	0}, /* 356 */
@@ -1299,7 +1300,7 @@ lx_sysent_t lx_sysent64[] = {
 	{"finit_module", NULL,			NOSYS_NULL,	0}, /* 313 */
 	{"sched_setattr", lx_sched_setattr,	0,		3}, /* 314 */
 	{"sched_getattr", lx_sched_getattr,	0,		4}, /* 315 */
-	{"renameat2", NULL,			NOSYS_NULL,	0}, /* 316 */
+	{"renameat2",	lx_renameat2,		0,		5}, /* 316 */
 	{"seccomp",	NULL,			NOSYS_NULL,	0}, /* 317 */
 	{"getrandom",	lx_getrandom,		0,		3}, /* 318 */
 	{"memfd_create", NULL,			NOSYS_NULL,	0}, /* 319 */

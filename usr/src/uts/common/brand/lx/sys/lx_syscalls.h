@@ -24,6 +24,7 @@
  * Use is subject to license terms.
  * Copyright 2018 Joyent, Inc.
  * Copyright 2026 OmniOS Community Edition (OmniOSce) Association.
+ * Copyright 2026 the NoctOS Project.
  */
 
 #ifndef _SYS_LINUX_SYSCALLS_H
@@ -200,6 +201,7 @@ extern long lx_recvmmsg();
 extern long lx_recvfrom();
 extern long lx_rename();
 extern long lx_renameat();
+extern long lx_renameat2();
 extern long lx_sched_getaffinity();
 extern long lx_sched_getparam();
 extern long lx_sched_getscheduler();
