@@ -14,6 +14,10 @@
  * Use is subject to license terms.
  * Copyright 2019 Joyent, Inc.
  */
+/*
+ * Copyright 2026 the NoctOS Project.
+ */
+
 
 #include <sys/types.h>
 #include <sys/systm.h>
@@ -547,20 +551,17 @@ lx_get_mapping(uintptr_t find_addr, size_t find_size, lx_segmap_t *mp,
 			/*
 			 * We found a mapping but the size being requested is
 			 * less than the mapping and not a multiple of our page
-			 * size. If it is an anonymous mapping, that likely
-			 * means the application did the initial mmap with this
-			 * odd size. We'll round up to the next page boundary
-			 * in this case.
+			 * size, which likely means the application did the
+			 * initial mmap() with this odd size.  Linux rounds
+			 * mremap() sizes up to the next page boundary for all
+			 * mapping types, so do the same.  (This was
+			 * historically done only for anonymous mappings,
+			 * which made mremap() of a file-backed shared mapping
+			 * with an unaligned size fail with EINVAL -- the
+			 * exact pattern wl_shm uses to resize memfd-backed
+			 * pools.)
 			 */
-			if (seg->s_ops == &segspt_shmops ||
-			    (seg->s_ops == &segvn_ops &&
-			    (SEGOP_GETVP(seg, saddr, &vp) != 0 ||
-			    vp == NULL))) {
-				/*
-				 * It's anonymous, round up the size.
-				 */
-				find_size = ptob(btopr(find_size));
-			}
+			find_size = ptob(btopr(find_size));
 		}
 
 		/* Check if mapping matches our arguments */
