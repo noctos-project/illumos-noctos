@@ -27,6 +27,7 @@
  * Copyright 2019 Joyent, Inc.
  * Copyright 2025 Edgecast Cloud LLC.
  * Copyright 2026 OmniOS Community Edition (OmniOSce) Association.
+ * Copyright 2026 NoctOS Project
  */
 
 #ifndef _LX_BRAND_H
@@ -369,6 +370,15 @@ typedef struct lx_proc_data {
 	 * needs to setup this mask.
 	 */
 	uint32_t l_coredump_filter;
+
+	/*
+	 * Emulated Linux capability bounding set: a bit set here marks a
+	 * capability dropped via prctl(PR_CAPBSET_DROP).  Zero (the
+	 * kmem_zalloc default for fresh brand data) is the full bounding
+	 * set.  Inherited across fork via lx_copy_procdata() and preserved
+	 * across exec, as on Linux.  Consulted only by PR_CAPBSET_READ.
+	 */
+	uint64_t l_caps_bset_drop;
 } lx_proc_data_t;
 
 #endif	/* _KERNEL */

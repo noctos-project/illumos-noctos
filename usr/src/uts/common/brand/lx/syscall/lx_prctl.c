@@ -11,6 +11,7 @@
 
 /*
  * Copyright (c) 2018, Joyent, Inc.
+ * Copyright 2026 NoctOS Project
  */
 
 #include <sys/systm.h>
@@ -64,6 +65,21 @@
 #define	LX_PR_GET_TID_ADDRESS		40
 #define	LX_PR_SET_THP_DISABLE		41
 #define	LX_PR_GET_THP_DISABLE		42
+#define	LX_PR_CAP_AMBIENT		47
+
+/* Sub-operations for LX_PR_CAP_AMBIENT */
+#define	LX_PR_CAP_AMBIENT_IS_SET	1
+#define	LX_PR_CAP_AMBIENT_RAISE		2
+#define	LX_PR_CAP_AMBIENT_LOWER		3
+#define	LX_PR_CAP_AMBIENT_CLEAR_ALL	4
+
+/*
+ * The range of capabilities we emulate.  LX_CAP_MAX_VALID is also what
+ * lxprocfs reports in /proc/sys/kernel/cap_last_cap, so the probing loops
+ * used by libcap's cap_max_bits() and by systemd (ascending
+ * PR_CAPBSET_READ calls until EINVAL) see a picture consistent with /proc.
+ */
+#define	LX_CAP_VALID(c)	((c) >= 0 && (c) <= LX_CAP_MAX_VALID)
 
 #define	SECCOMP_MODE_FILTER	2
 
@@ -271,13 +287,96 @@ lx_prctl(int opt, uintptr_t arg2, uintptr_t arg3)
 		return (0);
 	}
 
+	case LX_PR_CAPBSET_READ: {
+		lx_proc_data_t *lxpd;
+		int cap = (int)arg2;
+		long rv;
+
+		if (!LX_CAP_VALID(cap)) {
+			return (set_errno(EINVAL));
+		}
+
+		mutex_enter(&curproc->p_lock);
+		VERIFY((lxpd = ptolxproc(curproc)) != NULL);
+		rv = (lxpd->l_caps_bset_drop & (1ULL << cap)) ? 0 : 1;
+		mutex_exit(&curproc->p_lock);
+
+		return (rv);
+	}
+
 	case LX_PR_CAPBSET_DROP: {
+		lx_proc_data_t *lxpd;
+		int cap = (int)arg2;
+
+		if (!LX_CAP_VALID(cap)) {
+			return (set_errno(EINVAL));
+		}
+
 		/*
 		 * On recent versions of Linux the login svc drops capabilities
 		 * and if that fails the svc dies and is restarted by systemd.
-		 * For now we pretend dropping capabilities succeeded.
+		 * Linux requires CAP_SETPCAP to drop a capability from the
+		 * bounding set; we are deliberately permissive here, as this
+		 * emulation has always been.  The drop is recorded (in
+		 * l_caps_bset_drop, inherited across fork and preserved
+		 * across exec, as on Linux) so that PR_CAPBSET_READ answers
+		 * honestly, but is not otherwise enforced: the capability
+		 * sets reported by the capget(2) emulation are derived from
+		 * illumos privileges and do not consult the bounding set.
 		 */
+		mutex_enter(&curproc->p_lock);
+		VERIFY((lxpd = ptolxproc(curproc)) != NULL);
+		lxpd->l_caps_bset_drop |= (1ULL << cap);
+		mutex_exit(&curproc->p_lock);
+
 		return (0);
+	}
+
+	case LX_PR_CAP_AMBIENT: {
+		int op = (int)arg2;
+		int cap = (int)arg3;
+
+		/*
+		 * We model the ambient capability set as permanently empty,
+		 * which is the default state of a Linux process.  A
+		 * capability may only be raised into the ambient set when it
+		 * is present in both the permitted and the inheritable sets;
+		 * since the emulated inheritable set of a branded process is
+		 * empty by default, failing PR_CAP_AMBIENT_RAISE with EPERM
+		 * is the same answer an unprepared process receives on
+		 * Linux.  Lowering a capability that is not in the (empty)
+		 * set and clearing the empty set are both successful no-ops,
+		 * also as on Linux.  systemd's pre-exec child setup invokes
+		 * PR_CAP_AMBIENT_CLEAR_ALL for every service it spawns.
+		 */
+		switch (op) {
+		case LX_PR_CAP_AMBIENT_IS_SET:
+			if (!LX_CAP_VALID(cap)) {
+				return (set_errno(EINVAL));
+			}
+			return (0);
+
+		case LX_PR_CAP_AMBIENT_RAISE:
+			if (!LX_CAP_VALID(cap)) {
+				return (set_errno(EINVAL));
+			}
+			return (set_errno(EPERM));
+
+		case LX_PR_CAP_AMBIENT_LOWER:
+			if (!LX_CAP_VALID(cap)) {
+				return (set_errno(EINVAL));
+			}
+			return (0);
+
+		case LX_PR_CAP_AMBIENT_CLEAR_ALL:
+			if (arg3 != 0) {
+				return (set_errno(EINVAL));
+			}
+			return (0);
+
+		default:
+			return (set_errno(EINVAL));
+		}
 	}
 
 	case LX_PR_SET_NO_NEW_PRIVS: {
