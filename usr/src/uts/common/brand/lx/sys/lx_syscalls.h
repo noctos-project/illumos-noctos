@@ -152,6 +152,7 @@ extern long lx_lstat32();
 extern long lx_lstat64();
 extern long lx_listxattr();
 extern long lx_madvise();
+extern long lx_memfd_create();
 extern long lx_mincore();
 extern long lx_mkdir();
 extern long lx_mkdirat();

@@ -25,6 +25,10 @@
  * Copyright 2024 MNX Cloud, Inc.
  * Copyright 2026 OmniOS Community Edition (OmniOSce) Association.
  */
+/*
+ * Copyright 2026 the NoctOS Project.
+ */
+
 
 #ifndef _SYS_LX_FCNTL_H
 #define	_SYS_LX_FCNTL_H
@@ -87,6 +91,8 @@ extern "C" {
 #define	LX_F_DUPFD_CLOEXEC	1030
 #define	LX_F_SETPIPE_SZ		1031
 #define	LX_F_GETPIPE_SZ		1032
+#define	LX_F_ADD_SEALS		1033
+#define	LX_F_GET_SEALS		1034
 
 #define	LX_F_RDLCK		0
 #define	LX_F_WRLCK		1

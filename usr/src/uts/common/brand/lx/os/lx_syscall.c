@@ -890,7 +890,7 @@ lx_sysent_t lx_sysent32[] = {
 	{"renameat2",	lx_renameat2,		0,		5}, /* 353 */
 	{"seccomp",	NULL,			NOSYS_NULL,	0}, /* 354 */
 	{"getrandom",	lx_getrandom,		0,		3}, /* 355 */
-	{"memfd_create", NULL,			NOSYS_NULL,	0}, /* 356 */
+	{"memfd_create", lx_memfd_create,	0,		2}, /* 356 */
 	{"bpf",		NULL,			NOSYS_NULL,	0}, /* 357 */
 	{"execveat",	NULL,			NOSYS_NULL,	0}, /* 358 */
 	{"socket",	NULL,			NOSYS_NULL,	0}, /* 359 */
@@ -1303,7 +1303,7 @@ lx_sysent_t lx_sysent64[] = {
 	{"renameat2",	lx_renameat2,		0,		5}, /* 316 */
 	{"seccomp",	NULL,			NOSYS_NULL,	0}, /* 317 */
 	{"getrandom",	lx_getrandom,		0,		3}, /* 318 */
-	{"memfd_create", NULL,			NOSYS_NULL,	0}, /* 319 */
+	{"memfd_create", lx_memfd_create,	0,		2}, /* 319 */
 	{"kexec_file_load", NULL,		NOSYS_NULL,	0}, /* 320 */
 	{"bpf",		NULL,			NOSYS_NULL,	0}, /* 321 */
 	{"execveat",	NULL,			NOSYS_NULL,	0}, /* 322 */
