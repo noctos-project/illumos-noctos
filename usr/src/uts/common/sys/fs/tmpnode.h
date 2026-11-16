@@ -22,6 +22,10 @@
  * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
+/*
+ * Copyright 2026 the NoctOS Project.
+ */
+
 
 #ifndef _SYS_FS_TMPNODE_H
 #define	_SYS_FS_TMPNODE_H
@@ -87,6 +91,7 @@ struct tmpnode {
 	kmutex_t	tn_tlock;		/* time, flag, and nlink lock */
 	struct tmpnode *tn_xattrdp;		/* ext. attribute directory */
 	uint_t		tn_flags;		/* tmpnode specific flags */
+	uint_t		tn_seals;		/* file seals (TMP_SEAL_*) */
 };
 
 #define	tn_dir		un_tmpnode.un_dirstruct.un_dirlist
@@ -99,6 +104,21 @@ struct tmpnode {
  * tmnode flag values.
  */
 #define	ISXATTR		0x1
+
+/*
+ * File seal values (tn_seals), modeled on (and numerically identical to)
+ * the Linux F_SEAL_* constants so that emulation layers can pass them
+ * through unmodified.  Seals are monotonic: once added to a node they
+ * can never be removed.  They are only meaningful on regular files.
+ */
+#define	TMP_SEAL_SEAL		0x0001	/* prevent further seals */
+#define	TMP_SEAL_SHRINK		0x0002	/* prevent file from shrinking */
+#define	TMP_SEAL_GROW		0x0004	/* prevent file from growing */
+#define	TMP_SEAL_WRITE		0x0008	/* prevent writes */
+#define	TMP_SEAL_FUTURE_WRITE	0x0010	/* prevent new writes/mappings */
+
+#define	TMP_SEAL_ALL		(TMP_SEAL_SEAL | TMP_SEAL_SHRINK | \
+	TMP_SEAL_GROW | TMP_SEAL_WRITE | TMP_SEAL_FUTURE_WRITE)
 
 /*
  * Attributes

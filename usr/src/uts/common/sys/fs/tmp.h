@@ -25,6 +25,10 @@
 /*
  * Copyright 2015 Joyent, Inc.
  */
+/*
+ * Copyright 2026 the NoctOS Project.
+ */
+
 
 #ifndef	_SYS_FS_TMP_H
 #define	_SYS_FS_TMP_H
@@ -95,6 +99,9 @@ extern size_t	tmpfs_maxkmem;	/* Allocatable kernel memory in bytes */
 extern	void	tmpnode_init(struct tmount *, struct tmpnode *,
 	struct vattr *, struct cred *);
 extern	int	tmpnode_trunc(struct tmount *, struct tmpnode *, ulong_t);
+extern	int	tmp_seal_get(struct vnode *, uint_t *);
+extern	int	tmp_seal_add(struct vnode *, uint_t);
+extern	struct vnodeops *tmp_vnodeops;
 extern	void	tmpnode_growmap(struct tmpnode *, ulong_t);
 extern	int	tdirlookup(struct tmpnode *, char *, struct tmpnode **,
     struct cred *);

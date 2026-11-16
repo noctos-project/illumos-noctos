@@ -22,6 +22,10 @@
  * Copyright (c) 1990, 2010, Oracle and/or its affiliates. All rights reserved.
  * Copyright 2015 Joyent, Inc.
  */
+/*
+ * Copyright 2026 the NoctOS Project.
+ */
+
 
 #include <sys/types.h>
 #include <sys/errno.h>
@@ -283,5 +287,65 @@ tmp_convmode(char *str, mode_t *mode)
 	}
 
 	*mode = VALIDMODEBITS & num;
+	return (0);
+}
+
+/*
+ * File seals, modeled on Linux memfd semantics: a monotonic set of
+ * restrictions on a regular tmpfs file, stored in tn_seals and enforced
+ * in the write (tmp_write), truncation (tmp_setattr, tmp_freesp) and
+ * mapping (tmp_map) paths.  Seals can only be added, never removed.
+ *
+ * Both functions validate that the vnode genuinely belongs to tmpfs so
+ * that callers from outside the filesystem (e.g. brand emulation code)
+ * can pass arbitrary vnodes safely.
+ *
+ * Deviation from Linux: adding TMP_SEAL_WRITE does not (yet) fail with
+ * EBUSY while writable shared mappings of the file exist; sealing with
+ * an existing writable mapping is self-inflicted and the write seal
+ * still blocks all future write(2)s and mappings.
+ */
+int
+tmp_seal_get(struct vnode *vp, uint_t *sealsp)
+{
+	struct tmpnode *tp;
+
+	if (!vn_matchops(vp, tmp_vnodeops) || vp->v_type != VREG)
+		return (EINVAL);
+
+	tp = (struct tmpnode *)VTOTN(vp);
+	mutex_enter(&tp->tn_tlock);
+	*sealsp = tp->tn_seals;
+	mutex_exit(&tp->tn_tlock);
+	return (0);
+}
+
+int
+tmp_seal_add(struct vnode *vp, uint_t seals)
+{
+	struct tmpnode *tp;
+
+	if ((seals & ~TMP_SEAL_ALL) != 0)
+		return (EINVAL);
+	if (!vn_matchops(vp, tmp_vnodeops) || vp->v_type != VREG)
+		return (EINVAL);
+
+	tp = (struct tmpnode *)VTOTN(vp);
+
+	/*
+	 * Take tn_rwlock as writer so that a new seal serializes against
+	 * in-flight writes and truncations rather than racing past an
+	 * operation it should have forbidden.
+	 */
+	rw_enter(&tp->tn_rwlock, RW_WRITER);
+	mutex_enter(&tp->tn_tlock);
+	if (tp->tn_seals & TMP_SEAL_SEAL) {
+		mutex_exit(&tp->tn_tlock);
+		rw_exit(&tp->tn_rwlock);
+		return (EPERM);
+	}
+	tp->tn_seals |= seals;
+	mutex_exit(&tp->tn_tlock);
+	rw_exit(&tp->tn_rwlock);
 	return (0);
 }

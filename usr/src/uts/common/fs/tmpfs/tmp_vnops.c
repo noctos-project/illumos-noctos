@@ -30,6 +30,10 @@
  * Copyright 2016 RackTop Systems.
  * Copyright (c) 2017 by Delphix. All rights reserved.
  */
+/*
+ * Copyright 2026 the NoctOS Project.
+ */
+
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -635,6 +639,19 @@ tmp_write(struct vnode *vp, struct uio *uiop, int ioflag, struct cred *cred,
 		uiop->uio_loffset = tp->tn_size;
 	}
 
+	/*
+	 * Enforce file seals (see tmp_seal_add()).
+	 */
+	if (tp->tn_seals & (TMP_SEAL_WRITE | TMP_SEAL_FUTURE_WRITE)) {
+		rw_exit(&tp->tn_contents);
+		return (EPERM);
+	}
+	if ((tp->tn_seals & TMP_SEAL_GROW) &&
+	    (uiop->uio_loffset + uiop->uio_resid > tp->tn_size)) {
+		rw_exit(&tp->tn_contents);
+		return (EPERM);
+	}
+
 	error = wrtmp(tm, tp, uiop, cred, ct);
 
 	rw_exit(&tp->tn_contents);
@@ -784,7 +801,17 @@ tmp_setattr(
 
 		rw_enter(&tp->tn_rwlock, RW_WRITER);
 		rw_enter(&tp->tn_contents, RW_WRITER);
-		error = tmpnode_trunc(tm, tp, (ulong_t)vap->va_size);
+		if (((tp->tn_seals & TMP_SEAL_SHRINK) &&
+		    vap->va_size < tp->tn_size) ||
+		    ((tp->tn_seals & TMP_SEAL_GROW) &&
+		    vap->va_size > tp->tn_size)) {
+			/*
+			 * Enforce file seals (see tmp_seal_add()).
+			 */
+			error = EPERM;
+		} else {
+			error = tmpnode_trunc(tm, tp, (ulong_t)vap->va_size);
+		}
 		rw_exit(&tp->tn_contents);
 		rw_exit(&tp->tn_rwlock);
 
@@ -2200,6 +2227,14 @@ tmp_map(
 		return (ENODEV);
 
 	/*
+	 * Enforce file seals: once write-sealed, no new shared writable
+	 * mappings may be created (see tmp_seal_add()).
+	 */
+	if ((flags & MAP_SHARED) && (prot & PROT_WRITE) &&
+	    (tp->tn_seals & (TMP_SEAL_WRITE | TMP_SEAL_FUTURE_WRITE)))
+		return (EPERM);
+
+	/*
 	 * Don't allow mapping to locked file
 	 */
 	if (vn_has_mandatory_locks(vp, tp->tn_mode)) {
@@ -2284,6 +2319,15 @@ tmp_freesp(struct vnode *vp, struct flock64 *lp, int flag)
 	if (tp->tn_size == lp->l_start) {
 		rw_exit(&tp->tn_rwlock);
 		return (0);
+	}
+
+	/*
+	 * Enforce file seals (see tmp_seal_add()).
+	 */
+	if (((tp->tn_seals & TMP_SEAL_SHRINK) && lp->l_start < tp->tn_size) ||
+	    ((tp->tn_seals & TMP_SEAL_GROW) && lp->l_start > tp->tn_size)) {
+		rw_exit(&tp->tn_rwlock);
+		return (EPERM);
 	}
 
 	/*
