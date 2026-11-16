@@ -22,6 +22,10 @@
  * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
+/*
+ * Copyright 2026 the NoctOS Project.
+ */
+
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -172,6 +176,7 @@ tmpnode_init(struct tmount *tm, struct tmpnode *t, vattr_t *vap, cred_t *cred)
 	t->tn_nodeid = (ino64_t)(uint32_t)((uintptr_t)t >> 3);
 	t->tn_nlink = 1;
 	t->tn_size = 0;
+	t->tn_seals = 0;
 
 	if (cred == NULL) {
 		t->tn_uid = vap->va_uid;
