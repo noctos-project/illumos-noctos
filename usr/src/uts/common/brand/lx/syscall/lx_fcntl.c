@@ -14,6 +14,10 @@
  * Copyright 2024 MNX Cloud, Inc.
  * Copyright 2024 OmniOS Community Edition (OmniOSce) Association.
  */
+/*
+ * Copyright 2026 the NoctOS Project.
+ */
+
 
 #include <sys/systm.h>
 #include <sys/zone.h>
@@ -27,6 +31,7 @@
 #include <sys/lx_impl.h>
 #include <sys/lx_brand.h>
 #include <sys/lx_fcntl.h>
+#include <sys/fs/tmp.h>
 #include <sys/lx_misc.h>
 #include <sys/lx_socket.h>
 #include <sys/brand.h>
@@ -255,6 +260,40 @@ out:
 	return (res);
 }
 
+/*
+ * File seals (fcntl F_ADD_SEALS/F_GET_SEALS), as created by
+ * memfd_create(2) emulation (see lx_memfd.c).  The Linux F_SEAL_*
+ * values are numerically identical to TMP_SEAL_*, so seal masks pass
+ * straight through to tmpfs, which also performs all validation
+ * (including EINVAL for non-tmpfs vnodes, matching Linux behavior for
+ * files that do not support sealing).
+ */
+static int
+lx_fcntl_seals(int fd, int cmd, ulong_t arg)
+{
+	file_t *fp;
+	uint_t seals = 0;
+	int error;
+	int rc = 0;
+
+	if ((fp = getf(fd)) == NULL)
+		return (set_errno(EBADF));
+
+	if (cmd == LX_F_ADD_SEALS) {
+		error = tmp_seal_add(fp->f_vnode, (uint_t)arg);
+	} else {
+		ASSERT(cmd == LX_F_GET_SEALS);
+		error = tmp_seal_get(fp->f_vnode, &seals);
+		rc = (int)seals;
+	}
+	releasef(fd);
+
+	if (error != 0)
+		return (set_errno(error));
+
+	return (rc);
+}
+
 static int
 lx_fcntl_common(int fd, int cmd, ulong_t arg)
 {
@@ -367,6 +406,11 @@ lx_fcntl_common(int fd, int cmd, ulong_t arg)
 	case LX_F_SETPIPE_SZ:
 	case LX_F_GETPIPE_SZ:
 		rc = lx_fcntl_pipesz(fd, cmd, arg);
+		break;
+
+	case LX_F_ADD_SEALS:
+	case LX_F_GET_SEALS:
+		rc = lx_fcntl_seals(fd, cmd, arg);
 		break;
 
 	default:
