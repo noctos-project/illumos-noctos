@@ -12,6 +12,7 @@
 /*
  * Copyright (c) 2014, Joyent, Inc.  All rights reserved.
  * Copyright 2020 Oxide Computer Company
+ * Copyright 2026 NoctOS Project
  */
 
 #ifndef _SYS_EPOLL_H
@@ -19,6 +20,7 @@
 
 #include <sys/types.h>
 #include <sys/poll.h>
+#include <sys/signal.h>	/* sigset_t, for epoll_pwait() */
 
 #ifdef	__cplusplus
 extern "C" {

@@ -11,6 +11,7 @@
 
 /*
  * Copyright 2016 Joyent, Inc.
+ * Copyright 2026 NoctOS Project
  */
 
 /*
@@ -25,6 +26,7 @@
 #define	_SYS_SIGNALFD_H
 
 #include <sys/types.h>
+#include <sys/signal.h>	/* sigset_t, for signalfd() */
 
 #ifdef	__cplusplus
 extern "C" {
